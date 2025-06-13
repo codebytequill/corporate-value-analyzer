@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Value Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            background-color: #111827;
+            color: #d1d5db;
+        }
+        .card {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+        }
+        .btn-primary {
+            background-color: #4f46e5;
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+        }
+        .loader {
+            border-top-color: #4f46e5;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased">
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">Corporate Value Analyzer</h1>
+            <p class="text-lg text-gray-400">Does a company's culture match its mission statement?</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="space-y-8">
+            <!-- Input Card -->
+            <div id="input-card" class="card p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold text-white mb-4 border-b border-gray-600 pb-3">1. Enter Company Info</h2>
+                
+                <div class="space-y-4">
+                    <!-- Mission Keywords Input -->
+                    <div>
+                        <label for="mission-keywords" class="block text-sm font-medium text-gray-300 mb-1">Mission Statement Keywords</label>
+                        <input type="text" id="mission-keywords" class="w-full bg-gray-900 border border-gray-600 text-white rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., innovation, collaboration, integrity">
+                        <p class="text-xs text-gray-500 mt-1">Enter comma-separated keywords from the company's values.</p>
+                    </div>
+
+                    <!-- Reviews Input -->
+                    <div>
+                        <label for="employee-reviews" class="block text-sm font-medium text-gray-300 mb-1">Paste Employee Reviews</label>
+                        <textarea id="employee-reviews" rows="8" class="w-full bg-gray-900 border border-gray-600 text-white rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Paste 3-5 employee reviews here, separated by a new line."></textarea>
+                        <p class="text-xs text-gray-500 mt-1">For this demo, please manually copy/paste reviews.</p>
+                    </div>
+                    
+                    <!-- Analyze Button -->
+                    <div class="pt-2">
+                        <button id="analyze-btn" class="w-full btn-primary text-white font-bold py-2 px-4 rounded-md flex items-center justify-center">
+                            Analyze Values
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="hidden">
+                <h2 class="text-2xl font-semibold text-white mb-4 border-b border-gray-600 pb-3">2. Reality Check Scorecard</h2>
+                <div id="loader" class="hidden my-8 flex justify-center">
+                    <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-500 h-12 w-12"></div>
+                </div>
+                <div id="results-container" class="space-y-4">
+                    <!-- Results will be injected here -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const keywordsInput = document.getElementById('mission-keywords');
+            const reviewsInput = document.getElementById('employee-reviews');
+            const resultsSection = document.getElementById('results-section');
+            const resultsContainer = document.getElementById('results-container');
+            const loader = document.getElementById('loader');
+
+            // --- Sentiment Analysis Logic ---
+            // In a real-world app, you'd use a more sophisticated library.
+            // This simple lexicon-based approach is for demonstration.
+            const sentimentLexicon = {
+                positive: ['great', 'excellent', 'fantastic', 'love', 'amazing', 'good', 'supportive', 'wonderful', 'best', 'happy', 'positive'],
+                negative: ['terrible', 'awful', 'myth', 'never', 'poor', 'bad', 'toxic', 'stressful', 'zero', 'hate', 'negative', 'micromanage']
+            };
+
+            function getSentimentScore(text) {
+                const words = text.toLowerCase().split(/\s+/);
+                let score = 0;
+                words.forEach(word => {
+                    if (sentimentLexicon.positive.includes(word)) {
+                        score++;
+                    } else if (sentimentLexicon.negative.includes(word)) {
+                        score--;
+                    }
+                });
+                // Normalize score to be between -1 and 1 (roughly)
+                return words.length > 0 ? score / words.length * 5 : 0;
+            }
+
+            // --- Main Analysis Function ---
+            function generateRealityCheckScorecard(missionKeywords, reviews) {
+                const scorecard = {};
+                
+                missionKeywords.forEach(keyword => {
+                    const trimmedKeyword = keyword.trim();
+                    if (!trimmedKeyword) return;
+
+                    const relevantReviews = reviews.filter(r => r.toLowerCase().includes(trimmedKeyword.toLowerCase()));
+                    
+                    if (relevantReviews.length === 0) {
+                        scorecard[trimmedKeyword] = { sentiment: "Not Mentioned", count: 0 };
+                        return;
+                    }
+                    
+                    let totalSentimentScore = 0;
+                    relevantReviews.forEach(reviewText => {
+                        totalSentimentScore += getSentimentScore(reviewText);
+                    });
+                    
+                    const averageSentiment = totalSentimentScore / relevantReviews.length;
+                    scorecard[trimmedKeyword] = { sentiment: averageSentiment, count: relevantReviews.length };
+                });
+                
+                return scorecard;
+            }
+            
+            // --- Display Logic ---
+            function displayResults(scorecard) {
+                resultsContainer.innerHTML = ''; // Clear previous results
+                if (Object.keys(scorecard).length === 0) {
+                    resultsContainer.innerHTML = `<p class="text-gray-400">No keywords entered. Please provide keywords to analyze.</p>`;
+                    return;
+                }
+                
+                for (const [keyword, data] of Object.entries(scorecard)) {
+                    let status, emoji;
+                    const { sentiment, count } = data;
+
+                    if (sentiment === "Not Mentioned") {
+                        status = "Not mentioned in reviews.";
+                        emoji = '🤷';
+                    } else if (sentiment > 0.1) {
+                        status = `Generally Positive (Score: ${sentiment.toFixed(2)})`;
+                        emoji = '👍';
+                    } else if (sentiment < -0.1) {
+                        status = `Generally Negative (Score: ${sentiment.toFixed(2)})`;
+                        emoji = '👎';
+                    } else {
+                        status = `Mixed or Neutral (Score: ${sentiment.toFixed(2)})`;
+                        emoji = '🤔';
+                    }
+
+                    const resultCard = `
+                        <div class="card p-4 rounded-lg shadow-md transform hover:scale-105 transition-transform duration-300">
+                            <h3 class="text-xl font-bold text-white mb-2">${emoji} ${keyword.toUpperCase()}</h3>
+                            <p class="text-gray-300"><span class="font-semibold">Status:</span> ${status}</p>
+                            <p class="text-gray-400 text-sm"><span class="font-semibold">Mentions:</span> Found in ${count} review(s).</p>
+                        </div>
+                    `;
+                    resultsContainer.innerHTML += resultCard;
+                }
+            }
+            
+            // --- Event Listener ---
+            analyzeBtn.addEventListener('click', () => {
+                const keywords = keywordsInput.value.split(',').filter(k => k.trim() !== '');
+                // Split reviews by newline, and filter out empty lines
+                const reviews = reviewsInput.value.split('\n').filter(r => r.trim() !== '');
+
+                if (keywords.length === 0 || reviews.length === 0) {
+                    alert('Please enter at least one keyword and one review.');
+                    return;
+                }
+
+                resultsSection.classList.remove('hidden');
+                loader.classList.remove('hidden');
+                resultsContainer.innerHTML = '';
+
+                // Simulate processing time
+                setTimeout(() => {
+                    const finalScorecard = generateRealityCheckScorecard(keywords, reviews);
+                    loader.classList.add('hidden');
+                    displayResults(finalScorecard);
+                }, 1500);
+            });
+
+            /*
+            // --- NOTE FOR REVERSE-ENGINEERING ---
+            // In a real backend application (like Python with Flask/Django or Node.js),
+            // you would not ask the user to paste reviews. Instead, you would use a
+            // library like 'BeautifulSoup' or 'Selenium' to scrape them automatically.
+            // Browser-based JavaScript cannot do this due to security restrictions (CORS).
+            
+            async function fetchAndScrapeReviews(url) {
+                // This is a conceptual example. It won't run in a browser.
+                // You would need a server-side proxy to get around CORS.
+                try {
+                    // const response = await fetch(`https://your-cors-proxy.com/${url}`);
+                    // const html = await response.text();
+                    // const parser = new DOMParser();
+                    // const doc = parser.parseFromString(html, 'text/html');
+                    // const reviewElements = doc.querySelectorAll('.review-text');
+                    // return Array.from(reviewElements).map(el => el.textContent);
+                    console.log("Scraping would happen here on a server.");
+                    return [];
+                } catch (error) {
+                    console.error("Scraping failed:", error);
+                    return [];
+                }
+            }
+            */
+        });
+    </script>
+</body>
+</html>
